@@ -1,0 +1,67 @@
+# ----------------------------
+# 🧠 Python / LangChain RAG App
+# ----------------------------
+
+# Virtual environments
+venv/
+aws_venv/
+.env/
+.venv/
+*/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment & credentials
+.env
+.env.*
+aws_credentials.json
+config.json
+
+# Streamlit config files
+.streamlit/secrets.toml
+.streamlit/config.toml
+
+# Local data (PDFs, embeddings, etc.)
+data/
+*.pdf
+*.csv
+*.xlsx
+*.db
+
+# Logs and cache
+logs/
+*.log
+.DS_Store
+__pycache__/
+cache/
+*.sqlite3
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+
+# IDE / Editor settings
+.vscode/
+.idea/
+*.code-workspace
+
+# Pytest & coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Temporary outputs
+temp/
+tmp/
+*.bak
+*.tmp
