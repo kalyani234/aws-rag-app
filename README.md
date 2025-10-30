@@ -7,7 +7,6 @@ Key features include:
 * RAG Pipeline: Combines retrieval and generation for context-aware responses.
 * User Interface: Streamlit app for easy interaction, including file uploads and real-time querying.
 * Scalability: Built on AWS services for cloud-native deployment.
-
 This project demonstrates best practices in integrating AWS AI/ML services with open-source tools for production-ready RAG systems.
 ---
 
@@ -19,7 +18,8 @@ This command creates a new Conda environment named 'venv' with Python 3.10, whic
 ```conda create -p venv python==3.10 -y
 conda activate ./venv
 ```
-Install Dependencies
+**Install Dependencies**
+
 Install all required Python packages listed in requirements.txt, which includes libraries like langchain, langchain-aws, streamlit, psycopg2, and others for embeddings, database connections, and app functionality.
 ``` install -r requirements.txt ```
 
@@ -29,8 +29,10 @@ Watchdog enables hot-reloading in Streamlit during development, automatically re
 ---
 
 ## 🔑 2. Environment Variables
+
 Environment variables are used to securely store sensitive information like AWS credentials and database connection details. Create a .env file in the project root directory (ensure it's added to .gitignore to prevent accidental commits).
 Populate it with the following:
+
 ```AWS_ACCESS_KEY_ID=your_aws_access_key  # Your AWS IAM access key with Bedrock permissions
 AWS_SECRET_ACCESS_KEY=your_aws_secret_key  # Corresponding secret key
 AWS_DEFAULT_REGION=your_aws_region  # e.g., us-east-1; region where Bedrock is available
@@ -70,14 +72,15 @@ This command runs the app in development mode. Streamlit will automatically open
 Access the app at:
 ```http://localhost:8501```
 
-* In the interface -
-  Upload documents to the data/ folder.
-  Run indexing via build_index.py or integrated UI buttons.
-  Query the system for responses.
+In the interface -
+  * Upload documents to the data/ folder.
+  * Run indexing via build_index.py or integrated UI buttons.
+  * Query the system for responses.
   
 ---
 
 ## 🧩 5. Notes
+
 * LangChain-AWS Integration: Directly interfaces with Bedrock for Titan embeddings and Llama 3 inference, ensuring low-latency and secure model access.
 * PGVector Usage: Enables efficient vector similarity searches (e.g., cosine similarity) for retrieving top-k relevant chunks.
 * RAG Chain Details: The pipeline fetches contexts, formats prompts, and generates responses, customizable via rag_chain.py.
