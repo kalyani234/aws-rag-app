@@ -1,0 +1,3 @@
+[general]
+requirements_file = "requirements-cloud.txt"
+python_version = "3.10"
