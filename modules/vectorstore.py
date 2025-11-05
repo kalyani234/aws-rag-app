@@ -11,20 +11,20 @@ def data_ingestion():
         raise ValueError("Please add PDF files to the `data/` folder.")
     loader = PyPDFDirectoryLoader("data")
     documents = loader.load()
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=3000, chunk_overlap=300)
-    return text_splitter.split_documents(documents)
+    chunks = RecursiveCharacterTextSplitter(chunk_size=3000, chunk_overlap=300).split_documents(documents)
+    return chunks
 
 def create_vector_store(docs):
     PGVector.from_documents(
         documents=docs,
         embedding=bedrock_embeddings,
         collection_name=COLLECTION_NAME,
-        connection_string=PG_CONNECTION_STRING
+        connection_string=PG_CONNECTION_STRING,
     )
 
 def load_vector_store():
     return PGVector(
         embedding_function=bedrock_embeddings,
         collection_name=COLLECTION_NAME,
-        connection_string=PG_CONNECTION_STRING
+        connection_string=PG_CONNECTION_STRING,
     )

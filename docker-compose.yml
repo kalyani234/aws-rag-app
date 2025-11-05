@@ -1,0 +1,40 @@
+services:
+  rag-assistant:
+    build:
+      context: .
+    container_name: aws-rag-assistant
+    ports:
+      - "8501:8501"
+    environment:
+      - PG_CONNECTION_STRING=${PG_CONNECTION_STRING}
+      - AWS_REGION=${AWS_REGION}
+      - SERPAPI_API_KEY=${SERPAPI_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+    volumes:
+      - ~/.aws:/root/.aws
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: ankane/pgvector:latest
+    container_name: pgvector-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: navya123
+      POSTGRES_DB: docs_db
+      POSTGRES_INITDB_ARGS: "--auth-host=md5 --auth-local=trust"
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  pg_data:

@@ -1,3 +1,4 @@
-[general]
-requirements_file = "requirements-cloud.txt"
-python_version = "3.10"
+[server]
+headless = true
+enableCORS = false
+port = 8501

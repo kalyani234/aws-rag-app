@@ -1,124 +1,141 @@
-"""
-build_index.py — Incremental, fault-tolerant vector index builder for large PDFs.
-✅ Batch processing
-✅ Automatic retry on timeout
-✅ Live progress logging
-✅ Safe writes to PostgreSQL (PGVector)
-"""
+# modules/qa_chain.py
+import os
+import requests
+from langchain.chains import ConversationalRetrievalChain
+from langchain_community.chat_message_histories import SQLChatMessageHistory
+from langchain.memory import ConversationSummaryMemory
+from sqlalchemy import create_engine
+from modules.prompts import rag_prompt
+from modules.config import PG_CONNECTION_STRING
+from modules.models import create_llama3_model
 
-import time
-import math
-from tqdm import tqdm
-from langchain_community.vectorstores import PGVector
-from modules.vectorstore import data_ingestion
-from modules.config import bedrock_embeddings, PG_CONNECTION_STRING
+# ------------------------------
+# 🧠 Persistent Memory (PostgreSQL)
+# ------------------------------
 
-# -----------------------------
-# Settings
-# -----------------------------
-COLLECTION_NAME = "aws_docs"
-BATCH_SIZE = 100        # ↓ Smaller = safer, avoids Titan timeouts (try 50–100)
-MAX_RETRIES = 3         # Retry failed batches up to 3 times
-RETRY_DELAY_BASE = 5    # Base seconds for exponential backoff between retries
-SLEEP_BETWEEN_BATCHES = 1  # Wait between successful batches
+engine = create_engine(PG_CONNECTION_STRING)
 
+chat_history = SQLChatMessageHistory(
+    table_name="chat_history",
+    session_id="default_session",
+    connection_string=PG_CONNECTION_STRING
+)
 
-# -----------------------------
-# Batch Embed & Store Function
-# -----------------------------
-def create_vector_store_in_batches(docs):
-    total_docs = len(docs)
-    total_batches = math.ceil(total_docs / BATCH_SIZE)
-    print(f"📄 Total Chunks: {total_docs}")
-    print(f"🧩 Processing in {total_batches} batches of {BATCH_SIZE} each\n")
+summary_llm = create_llama3_model(max_tokens=256, temperature=0.3)
 
-    for batch_idx in range(total_batches):
-        start_idx = batch_idx * BATCH_SIZE
-        end_idx = min(start_idx + BATCH_SIZE, total_docs)
-        batch_docs = docs[start_idx:end_idx]
+memory = ConversationSummaryMemory(
+    llm=summary_llm,
+    memory_key="chat_history",
+    return_messages=True,
+    output_key="answer",
+    chat_memory=chat_history
+)
 
-        print(f"[Batch {batch_idx+1}/{total_batches}] Embedding {len(batch_docs)} chunks...")
+# ------------------------------
+# 🌐 Web Augmentation (SerpAPI + GROQ)
+# ------------------------------
 
-        for attempt in range(1, MAX_RETRIES + 1):
-            try:
-                # Embed and store this batch
-                PGVector.from_documents(
-                    documents=batch_docs,
-                    embedding=bedrock_embeddings,
-                    collection_name=COLLECTION_NAME,
-                    connection_string=PG_CONNECTION_STRING,
-                )
+SERPAPI_KEY = os.getenv("SERPAPI_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-                print(f"✅ Batch {batch_idx+1}/{total_batches} stored successfully.")
-                break
-
-            except Exception as e:
-                print(f"⚠️ Attempt {attempt}/{MAX_RETRIES} failed for batch {batch_idx+1}: {e}")
-
-                if "ModelTimeoutException" in str(e):
-                    print("⏳ Bedrock model timed out — reducing batch size may help.")
-                elif "ThrottlingException" in str(e):
-                    print("⚠️ Hit AWS Bedrock rate limit — will retry automatically.")
-
-                if attempt < MAX_RETRIES:
-                    wait_time = RETRY_DELAY_BASE * attempt
-                    print(f"🔁 Retrying in {wait_time}s...")
-                    time.sleep(wait_time)
-                else:
-                    print(f"❌ Skipping batch {batch_idx+1} after {MAX_RETRIES} failures.")
-                    break
-
-        time.sleep(SLEEP_BETWEEN_BATCHES)
-
-
-# -----------------------------
-# Main Entry Point
-# -----------------------------
-if __name__ == "__main__":
-    print("🚀 Starting index build...")
-    start_time = time.time()
-
+def search_aws_docs(query: str):
+    """Use SerpAPI to search AWS Docs for relevant content."""
     try:
-        # Load and chunk PDF data
-        docs = data_ingestion()
-        print(f"✅ Loaded {len(docs)} chunks.")
+        if not SERPAPI_KEY:
+            return None
 
-        # Progress bar for all batches
-        with tqdm(total=len(docs), desc="🔢 Embedding progress", unit="chunks") as pbar:
-            total_batches = math.ceil(len(docs) / BATCH_SIZE)
-            for batch_idx in range(total_batches):
-                start_idx = batch_idx * BATCH_SIZE
-                end_idx = min(start_idx + BATCH_SIZE, len(docs))
-                batch_docs = docs[start_idx:end_idx]
+        params = {
+            "engine": "google",
+            "q": f"site:docs.aws.amazon.com {query}",
+            "api_key": SERPAPI_KEY
+        }
+        resp = requests.get("https://serpapi.com/search", params=params, timeout=20)
+        results = resp.json().get("organic_results", [])
+        snippets = [r.get("snippet", "") for r in results[:3]]
+        urls = [r.get("link", "") for r in results[:3]]
 
-                success = False
-                for attempt in range(1, MAX_RETRIES + 1):
-                    try:
-                        PGVector.from_documents(
-                            documents=batch_docs,
-                            embedding=bedrock_embeddings,
-                            collection_name=COLLECTION_NAME,
-                            connection_string=PG_CONNECTION_STRING,
-                        )
-                        success = True
-                        break
-                    except Exception as e:
-                        print(f"⚠️ Batch {batch_idx+1}/{total_batches} attempt {attempt} failed: {e}")
-                        wait_time = RETRY_DELAY_BASE * attempt
-                        print(f"🔁 Retrying in {wait_time}s...")
-                        time.sleep(wait_time)
-
-                if success:
-                    pbar.update(len(batch_docs))
-                else:
-                    print(f"❌ Skipped batch {batch_idx+1} after {MAX_RETRIES} retries.")
-
-                time.sleep(SLEEP_BETWEEN_BATCHES)
-
-        print("🎉 Vector store successfully saved to PostgreSQL!")
-
+        web_context = "\n".join(snippets)
+        web_sources = [u for u in urls if u]
+        return web_context, web_sources
     except Exception as e:
-        print(f"❌ Error: {e}")
-    finally:
-        total_time = round(time.time() - start_time, 2)
-        print(f"⏱️ Total time: {total_time} seconds")
+        print(f"⚠️ SerpAPI error: {e}")
+        return None, []
+
+def summarize_with_groq(text: str):
+    """Use GROQ to summarize or clean web results."""
+    try:
+        if not GROQ_API_KEY:
+            return text
+        headers = {
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": "mixtral-8x7b",
+            "messages": [
+                {"role": "system", "content": "Summarize AWS documentation concisely and factually."},
+                {"role": "user", "content": text}
+            ],
+            "temperature": 0.3,
+            "max_tokens": 512
+        }
+        resp = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload, timeout=30)
+        summary = resp.json()["choices"][0]["message"]["content"]
+        return summary
+    except Exception as e:
+        print(f"⚠️ GROQ summarization error: {e}")
+        return text
+
+# ------------------------------
+# 🔗 Hybrid RAG + Web + Memory
+# ------------------------------
+
+def get_response_with_prompt(llm, vector_store, query):
+    """
+    Executes a hybrid RAG query with persistent memory and live AWS Docs augmentation.
+    """
+
+    # 🔍 Step 1: Try vector DB (RAG)
+    qa_chain = ConversationalRetrievalChain.from_llm(
+        llm=llm,
+        retriever=vector_store.as_retriever(
+            search_type="similarity",
+            search_kwargs={"k": 3}
+        ),
+        memory=memory,
+        combine_docs_chain_kwargs={"prompt": rag_prompt},
+        return_source_documents=True
+    )
+
+    query_str = query if isinstance(query, str) else str(query)
+    result = qa_chain.invoke({"question": query_str})
+    formatted_answer = result.get("answer", "").strip()
+
+    # If the answer looks unrelated or empty → use web search fallback
+    if (
+        not formatted_answer
+        or "This question is not related to AWS Prescriptive Guidance" in formatted_answer
+        or len(formatted_answer.split()) < 15
+    ):
+        print("🌐 Falling back to SerpAPI + GROQ for live AWS Docs info...")
+        web_context, web_sources = search_aws_docs(query_str)
+        if web_context:
+            summarized = summarize_with_groq(web_context)
+            formatted_answer = summarized or "No live summary generated."
+            return {
+                "answer": formatted_answer.strip(),
+                "sources": web_sources or ["https://docs.aws.amazon.com/"]
+            }
+
+    # Deduplicate sources from embeddings
+    unique_sources = set()
+    if "source_documents" in result:
+        for doc in result["source_documents"]:
+            file_name = doc.metadata.get("source", "Unknown file")
+            unique_sources.add(file_name)
+
+    source_text = " | ".join(sorted(unique_sources)) if unique_sources else "No source found."
+    return {
+        "answer": formatted_answer or "No response generated.",
+        "sources": [source_text]
+    }

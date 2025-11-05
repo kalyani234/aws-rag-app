@@ -1,104 +1,90 @@
-import streamlit as st
 import time
-from modules.models import create_llama3_model
+import streamlit as st
+from modules.models import create_llama3_model, create_nova_model
 from modules.vectorstore import load_vector_store
 from modules.qa_chain import get_response_with_prompt
+from modules.ui import inject_global_styles, render_header, render_footer, sidebar_controls
+from modules.ui_texts import TEXTS
 
+st.set_page_config(page_title=TEXTS["app_title"], page_icon=TEXTS["page_icon"], layout="wide")
 
-# --------------------------------------------------------------
-# PAGE CONFIG + STYLING
-# --------------------------------------------------------------
-st.set_page_config(page_title="Document Q&A with Llama 3", layout="wide", page_icon="🦙")
+inject_global_styles()
+render_header()
 
-st.markdown("""
-<style>
-.main { background-color: #0d1117; color: #e6edf3; font-family: "Inter", sans-serif; padding: 1rem 2rem; }
-.stChatMessage { border-radius: 18px; margin: 10px 0; padding: 1.2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: all 0.3s ease-in-out; }
-.stChatMessage:hover { transform: scale(1.01); }
-.stChatMessage[data-testid="stChatMessage-user"] { background: linear-gradient(135deg, #111827, #1e293b); border: 1px solid #00b4d8; }
-.stChatMessage[data-testid="stChatMessage-assistant"] { background: linear-gradient(135deg, #1e1e1e, #232323); border: 1px solid #3a3f44; }
-.stTextInput > div > div > input { background-color: #161b22 !important; color: #e6edf3 !important; border: 1px solid #00b4d8 !important; border-radius: 10px; padding: 0.6rem; }
-.stButton > button { background: linear-gradient(90deg, #00b4d8, #0096c7); color: white !important; border-radius: 10px; font-weight: 600; padding: 0.6rem 1.2rem; border: none; transition: background 0.3s ease-in-out; }
-.stButton > button:hover { background: linear-gradient(90deg, #0096c7, #0077b6); }
-h1, h2, h3, h4, h5, h6 { color: #00b4d8; font-weight: 700; }
-</style>
-""", unsafe_allow_html=True)
+# Sidebar config
+max_tokens, temperature, cleared_chat = sidebar_controls()
 
-
-# --------------------------------------------------------------
-# HEADER + SIDEBAR
-# --------------------------------------------------------------
-st.header("🦙 Document Q&A with Llama 3")
-
-with st.sidebar:
-    st.markdown("### ⚙️ Model Configuration")
-    max_tokens = st.slider("Max tokens (response length):", 256, 2048, 1024, step=128)
-    temperature = st.slider("Temperature (creativity):", 0.0, 1.0, 0.5, step=0.1)
-    st.markdown("---")
-    st.info(f"**Model:** Meta Llama 3 8B Instruct\n**Tokens:** {max_tokens}\n**Temperature:** {temperature}")
-    st.markdown("### 📄 Source")
-    st.caption("AWS Guidance PDF — 7,253 chunks indexed in PostgreSQL via PGVector.")
-    st.markdown("---")
-    if st.button("🗑️ Clear Chat"):
-        st.session_state.messages = []
-        st.experimental_rerun()
-
-
-# --------------------------------------------------------------
-# LOAD VECTOR STORE
-# --------------------------------------------------------------
-vector_store = load_vector_store()
-
+# Session state
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "selected_model" not in st.session_state:
+    st.session_state.selected_model = None
 
+if cleared_chat:
+    st.session_state.messages = []
+    st.rerun()
 
-# --------------------------------------------------------------
-# DISPLAY CHAT HISTORY
-# --------------------------------------------------------------
+# Vector store
+vector_store = load_vector_store()
+
+# Model picker
+st.markdown(f"### {TEXTS['choose_model']}")
+col_a, col_b = st.columns(2)
+with col_a:
+    if st.button(TEXTS["model_llama"]):
+        st.session_state.selected_model = "llama3"
+with col_b:
+    if st.button(TEXTS["model_nova"]):
+        st.session_state.selected_model = "nova"
+
+selected_model = st.session_state.selected_model
+if selected_model:
+    model_name = TEXTS["active_llama"] if selected_model == "llama3" else TEXTS["active_nova"]
+    st.success(f"✅ Active model: {model_name}")
+else:
+    st.info(TEXTS["select_model_tip"])
+
+# Show chat history
 for msg in st.session_state.messages:
-    with st.chat_message(msg["role"], avatar="🧑‍💻" if msg["role"] == "user" else "🤖"):
+    with st.chat_message(msg["role"], avatar="👩🏻‍💻" if msg["role"] == "user" else "🟧"):
         st.markdown(msg["content"])
 
-
-# --------------------------------------------------------------
-# TYPING ANIMATION
-# --------------------------------------------------------------
 def stream_text(text: str):
     container = st.empty()
     typed = ""
-    for char in text:
-        typed += char
+    for ch in text:
+        typed += ch
         container.markdown(typed)
-        time.sleep(0.008)  # typing speed
+        time.sleep(0.006)
 
+# Chat box
+prompt = st.chat_input(TEXTS["chat_placeholder"])
 
-# --------------------------------------------------------------
-# HANDLE USER INPUT
-# --------------------------------------------------------------
-if user_question := st.chat_input("Ask a question about your documents..."):
-    st.session_state.messages.append({"role": "user", "content": user_question})
-    with st.chat_message("user", avatar="🧑‍💻"):
-        st.markdown(user_question)
+if prompt and selected_model:
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user", avatar="👩🏻‍💻"):
+        st.markdown(prompt)
 
-    with st.spinner("🤖 Llama 3 is generating a detailed answer..."):
+    with st.spinner(f"🟧 {model_name} {TEXTS['processing_text']}"):
         try:
-            llm = create_llama3_model(max_tokens=max_tokens, temperature=temperature)
-            answer = get_response_with_prompt(llm, vector_store, user_question)
+            llm = (
+                create_llama3_model(max_tokens=max_tokens, temperature=temperature)
+                if selected_model == "llama3"
+                else create_nova_model(max_tokens=max_tokens, temperature=temperature)
+            )
+            result = get_response_with_prompt(llm, vector_store, prompt)
+            answer = result.get("answer", TEXTS["no_response"])
+            sources = result.get("sources", [])
         except Exception as e:
-            answer = f"**Error:** {e}"
+            answer = f"{TEXTS['error_prefix']} {e}"
+            sources = []
 
-    st.session_state.messages.append({"role": "assistant", "content": answer})
-    with st.chat_message("assistant", avatar="🤖"):
-        stream_text(answer)
+    reply = answer
+    if sources:
+        reply += "\n\n---\n" + TEXTS["sources_heading"] + "\n" + "\n".join([f"- {s}" for s in sources])
 
+    st.session_state.messages.append({"role": "assistant", "content": reply})
+    with st.chat_message("assistant", avatar="🟧"):
+        stream_text(reply)
 
-# --------------------------------------------------------------
-# FOOTER
-# --------------------------------------------------------------
-st.markdown("""
-<hr style="border: 0.5px solid #2f3338;">
-<p style="text-align:center; color:gray;">
-Built with ❤️ by <b>Navya Kalyani</b> · Powered by <b>Llama 3</b> on <b>AWS Bedrock</b>
-</p>
-""", unsafe_allow_html=True)
+render_footer()
