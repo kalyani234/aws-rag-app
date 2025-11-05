@@ -89,3 +89,11 @@ In the interface -
 * Rebuild Index: Run python build_index.py to re-process and index documents in data/.
 * Test Database Connection: In Python, use psycopg2.connect() with env vars to verify connectivity.
 * Update Dependencies: If adding new packages, update requirements.txt with pip freeze > requirements.txt.
+
+
+6. Ethics & Fair Use
+This project was developed with respect for ethical AI use and fair data access principles.
+
+✅ Public Data Only — The assistant interacts exclusively with public AWS documentation (https://docs.aws.amazon.com/). It does not access or process any private, confidential, or user-specific data.
+
+✅ Legitimate APIs — Integrations such as Amazon Bedrock, SerpAPI, and Groq are used in full compliance with their respective terms of service and rate limits.
