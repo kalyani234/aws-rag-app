@@ -91,9 +91,20 @@ In the interface -
 * Update Dependencies: If adding new packages, update requirements.txt with pip freeze > requirements.txt.
 
 
-6. Ethics & Fair Use
+🧭 Ethics & Fair Use
+
 This project was developed with respect for ethical AI use and fair data access principles.
 
 ✅ Public Data Only — The assistant interacts exclusively with public AWS documentation (https://docs.aws.amazon.com/). It does not access or process any private, confidential, or user-specific data.
 
 ✅ Legitimate APIs — Integrations such as Amazon Bedrock, SerpAPI, and Groq are used in full compliance with their respective terms of service and rate limits.
+
+✅ Educational Purpose — The system is designed for learning, research, and technical exploration of AWS cloud and AI technologies.
+
+🔒 Secure Credentials — API keys and database connections are stored securely using environment variables (.env) and are never hardcoded or shared publicly.
+
+⚠️ Responsible AI Use — The assistant summarizes content; it does not claim authorship or ownership of AWS documentation. Users are encouraged to verify responses against official AWS resources.
+
+🚫 No Misrepresentation — This tool is not affiliated with or endorsed by Amazon Web Services. It is a personal project demonstrating integration of AWS Bedrock, LangChain, and modern retrieval architectures.
+
+By following these principles, the AWS RAG Assistant supports responsible innovation, intellectual property respect, and transparent AI research.
