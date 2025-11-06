@@ -43,18 +43,29 @@ def search_aws_docs(query, site="https://docs.aws.amazon.com/"):
 # 📄 Scrape AWS Docs page content
 # -----------------------------------------------
 def fetch_page_content(url):
-    """Fetch and clean paragraphs from an AWS Docs page"""
+    """Fetch paragraphs/lists from an AWS Docs web page robustly."""
     try:
-        res = requests.get(url, timeout=10)
+        # Use a browser-like user agent to avoid basic blocking
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/115.0.0.0 Safari/537.36"
+            )
+        }
+        res = requests.get(url, headers=headers, timeout=15)
         res.raise_for_status()
         soup = BeautifulSoup(res.text, "html.parser")
-        paragraphs = [p.get_text(" ", strip=True) for p in soup.find_all("p")]
-        content = " ".join(paragraphs)
-        return content[:6000]  # limit to avoid token overflow
+        # Target paragraphs and important lists/items
+        elements = soup.find_all(["p", "li", "div"])
+        content = " ".join(el.get_text(" ", strip=True) for el in elements)
+        print(f"✅ Scraped {len(content)} characters from {url}")
+        if len(content) < 100:
+            print("⚠️ Warning: Very little content scraped, page may be JavaScript-heavy or protected.")
+        return content[:6000]
     except Exception as e:
-        print(f"⚠️ Error fetching {url}: {e}")
+        print(f"❌ Error fetching {url}: {e}")
         return ""
-
 
 # -----------------------------------------------
 # ⚡ Optional: Summarize scraped text via Groq
@@ -65,7 +76,7 @@ def summarize_with_groq(text):
         return text[:6000]
 
     try:
-        url = "https://api.groq.com/openai/v1"
+        url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
         payload = {
             "model": "qwen/qwen3-32b",
