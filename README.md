@@ -1,110 +1,175 @@
-# 🧠 AWS RAG Assistant – LangChain + Bedrock + Streamlit
-Intelligent Retrieval-Augmented Generation system specifically designed for AWS documentation, guidelines, and best practices.
-Key features include:
+# ☁️ AWS RAG Assistant  
+### 🦙 Amazon Bedrock · 🧠 PGVector · 🌐 SerpAPI + Groq Web Fallback  
+![Python](https://img.shields.io/badge/Python-3.10-blue)
+![Docker](https://img.shields.io/badge/Docker-Ready-blue)
+![Streamlit](https://img.shields.io/badge/Streamlit-Cloud--UI-FF4B4B)
+![LangChain](https://img.shields.io/badge/LangChain-RAG-brightgreen)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow)
 
-* Document Processing: Supports multiple file formats, chunking, and embedding generation.
-* Vector Database: Uses PGVector for efficient similarity searches on embeddings.
-* RAG Pipeline: Combines retrieval and generation for context-aware responses.
-* User Interface: Streamlit app for easy interaction, including file uploads and real-time querying.
-* Scalability: Built on AWS services for cloud-native deployment.
-This project demonstrates best practices in integrating AWS AI/ML services with open-source tools for production-ready RAG systems.
 ---
 
-## ⚙️ 1. Environment Setup
-To get started, set up a isolated Python environment using Conda to avoid conflicts with system packages. This ensures reproducibility and ease of management.
+## 🧩 Overview
 
-* Create a Conda Environment
-This command creates a new Conda environment named 'venv' with Python 3.10, which is compatible with all dependencies in this project.
-```conda create -p venv python==3.10 -y
-conda activate ./venv
+**AWS RAG Assistant** is an intelligent Retrieval-Augmented Generation (RAG) chatbot that answers **AWS architecture, DevOps, and data engineering** questions.  
+It combines **Amazon Bedrock (Llama 3 & Nova Pro)**, **PGVector/PostgreSQL embeddings**, and a **web fallback using SerpAPI + Groq** to fetch and summarize live AWS documentation.
+
+If the local AWS PDF knowledge base doesn’t contain the answer, the assistant searches  
+[`https://docs.aws.amazon.com`](https://docs.aws.amazon.com) in real time and includes citations.
+
+---
+
+
+## 🚀 Key Features
+
+✅ **Two Bedrock Models**  
+- 🦙 *Meta Llama 3 8B Instruct* — lightweight, fast reasoning  
+- ⚡ *Amazon Nova Pro v1* — deep analytical model  
+
+✅ **Persistent Memory**  
+- Uses `ConversationSummaryMemory` and `SQLChatMessageHistory`  
+- Stores all chat sessions in PostgreSQL  
+
+✅ **Vector Search (RAG)**  
+- Embeds your AWS PDFs using **Titan Embeddings v2**  
+- Stores vectors in **PGVector**  
+
+✅ **Web Fallback (Hybrid QA)**  
+- If PGVector has no relevant context →  
+  Searches AWS Docs via **SerpAPI**, summarizes pages via **Groq**, and re-asks the model  
+
+✅ **Streamlit UI**  
+- Minimal dark AWS-themed interface  
+- Dynamic model switching  
+- Source citations for transparency  
+
+✅ **Dockerized Deployment**  
+- One command:  
+  ```bash
+  docker compose up --build
+
+
+
+---
+## 🗂️ Directory Structure
+
 ```
-**Install Dependencies**
-
-Install all required Python packages listed in requirements.txt, which includes libraries like langchain, langchain-aws, streamlit, psycopg2, and others for embeddings, database connections, and app functionality.
-``` install -r requirements.txt ```
-
-* (Optional) Install Watchdog for Faster Streamlit Reloads
-Watchdog enables hot-reloading in Streamlit during development, automatically refreshing the app when code changes are detected.
-```pip install watchdog```
----
-
-## 🔑 2. Environment Variables
-
-Environment variables are used to securely store sensitive information like AWS credentials and database connection details. Create a .env file in the project root directory (ensure it's added to .gitignore to prevent accidental commits).
-Populate it with the following:
-
-```AWS_ACCESS_KEY_ID=your_aws_access_key  # Your AWS IAM access key with Bedrock permissions
-AWS_SECRET_ACCESS_KEY=your_aws_secret_key  # Corresponding secret key
-AWS_DEFAULT_REGION=your_aws_region  # e.g., us-east-1; region where Bedrock is available
-
-# PostgreSQL connection
-PG_CONNECTION_STRING=postgresql+psycopg2://postgres:pwd@localhost:5432/docs_db
+aws-rag-app/
+├── app.py                    # Streamlit entry
+├── build_index.py            # Chunk + embed AWS PDFs into PGVector
+├── docker-compose.yaml
+├── Dockerfile
+├── requirements.txt
+├── data/                     # Place your AWS PDFs here
+└── modules/
+    ├── config.py             # Bedrock client, embeddings, PG conn
+    ├── models.py             # Bedrock model factory functions
+    ├── prompts.py            # RAG prompt template
+    ├── qa_chain.py           # RAG + memory + web fallback logic
+    ├── vectorstore.py        # PGVector loader
+    ├── web_search.py         # SerpAPI + Groq summarization
+    ├── ui.py                 # Streamlit UI helpers
+    ├── ui_markdown.py        # CSS + layout
+    └── ui_texts.py           # Text constants
 ```
-* Tip: For the database, use Amazon RDS PostgreSQL instance with the PGVector extension installed. To enable PGVector, connect to your database and run CREATE EXTENSION vector;. Ensure your IAM user has necessary permissions for Bedrock (e.g., bedrock:InvokeModel).
+
 ---
 
-## 📦 3. Project Structure
-The project is organized for modularity, separating concerns like configuration, embeddings, LLM integration, and the RAG chain. Here's the directory layout:
+⚙️ Setup Instructions
+1️⃣ Clone the repository
+git clone https://github.com/<your-username>/aws-rag-assistant.git
+cd aws-rag-assistant
 
-```aws-rag-app/
-│
-├── app.py                 # Main Streamlit application entry point; handles UI and user interactions
-├── requirements.txt       # List of Python dependencies for pip installation
-├── .env                   # Environment variables file (git-ignored for security)
-├── modules/               # Core logic modules
-│   ├── config.py          # Loads environment variables and sets up AWS/DB configurations
-│   ├── embeddings.py      # Generates embeddings using AWS Bedrock's Titan model
-│   ├── llm_model.py       # Initializes and invokes the Llama 3 model via Bedrock
-│   ├── vectorstore.py     # Configures PGVector vector store, handles indexing and retrieval
-│   └── rag_chain.py       # Builds the RAG pipeline, integrating retrieval and generation
-├── data/                  # Directory for storing uploaded documents or processed files
-└── build_index.py         # Standalone script to batch-index documents and store embeddings in the vector database
-```
----
+2️⃣ Add environment variables
 
-## 🚀 4. Run the Application
+Create a .env file in the project root:
 
-Once the environment is set up, launch the Streamlit app to interact with the RAG system.
-Start Streamlit App
-This command runs the app in development mode. Streamlit will automatically open a browser window or provide a local URL.
-```streamlit run app.py```
+PG_CONNECTION_STRING=postgresql+psycopg2://postgres:navya123@db:5432/docs_db
+AWS_REGION=us-east-1
+SERPAPI_API_KEY=your_serpapi_key
+GROQ_API_KEY=your_groq_key
 
-Access the app at:
-```http://localhost:8501```
 
-In the interface -
-  * Upload documents to the data/ folder.
-  * Run indexing via build_index.py or integrated UI buttons.
-  * Query the system for responses.
-  
----
+💡 Your ~/.aws credentials are automatically mounted in the container for Bedrock access.
 
-## 🧩 5. Notes
+3️⃣ Add your AWS PDFs
 
-* LangChain-AWS Integration: Directly interfaces with Bedrock for Titan embeddings and Llama 3 inference, ensuring low-latency and secure model access.
-* PGVector Usage: Enables efficient vector similarity searches (e.g., cosine similarity) for retrieving top-k relevant chunks.
-* RAG Chain Details: The pipeline fetches contexts, formats prompts, and generates responses, customizable via rag_chain.py.
-* Performance Tips: For large documents, adjust chunk sizes in embeddings.py. Monitor AWS quotas for Bedrock invocations.
-* Security Best Practices: Use IAM roles instead of access keys in production; enable SSL for RDS connections.
-* Rebuild Index: Run python build_index.py to re-process and index documents in data/.
-* Test Database Connection: In Python, use psycopg2.connect() with env vars to verify connectivity.
-* Update Dependencies: If adding new packages, update requirements.txt with pip freeze > requirements.txt.
+Place AWS Prescriptive Guidance or architecture PDFs in:
 
+data/
+
+4️⃣ Build vector embeddings
+docker compose up --build -d
+docker exec -it aws-rag-assistant python build_index.py
+
+
+Check the database:
+
+docker exec -it pgvector-db psql -U postgres -d docs_db
+\dt
+SELECT COUNT(*) FROM langchain_pg_embedding;
+
+5️⃣ Run the app
+docker compose up
+
+
+App will be live at 👉 http://localhost:8501
+
+🧪 Example Prompts
+Type	Example Question
+AWS Architecture	What are the key components of an AWS data lake?
+DevOps	How does AWS CodePipeline integrate with ECS deployments?
+Event-driven	How does AWS Glue work with EventBridge in a data lake?
+Web fallback	What new features were added to Amazon Bedrock in 2025?
+🧱 Database Commands
+
+To inspect or reset:
+
+docker exec -it pgvector-db psql -U postgres -d docs_db
+\dt
+TRUNCATE TABLE langchain_pg_embedding;
+TRUNCATE TABLE langchain_pg_collection;
+DROP TABLE IF EXISTS chat_history;
 
 🧭 Ethics & Fair Use
 
-This project was developed with respect for ethical AI use and fair data access principles.
+This project is built for educational and research purposes.
+All web data is sourced only from public AWS documentation:
 
-✅ Public Data Only — The assistant interacts exclusively with public AWS documentation (https://docs.aws.amazon.com/). It does not access or process any private, confidential, or user-specific data.
+✅ Queries https://docs.aws.amazon.com via SerpAPI (licensed API)
 
-✅ Legitimate APIs — Integrations such as Amazon Bedrock, SerpAPI, and Groq are used in full compliance with their respective terms of service and rate limits.
+✅ Summarizes fetched content with Groq API
 
-✅ Educational Purpose — The system is designed for learning, research, and technical exploration of AWS cloud and AI technologies.
+✅ Always cites original URLs
 
-🔒 Secure Credentials — API keys and database connections are stored securely using environment variables (.env) and are never hardcoded or shared publicly.
+❌ Does not scrape private or commercial content
 
-⚠️ Responsible AI Use — The assistant summarizes content; it does not claim authorship or ownership of AWS documentation. Users are encouraged to verify responses against official AWS resources.
+❌ Does not redistribute full AWS documentation
 
-🚫 No Misrepresentation — This tool is not affiliated with or endorsed by Amazon Web Services. It is a personal project demonstrating integration of AWS Bedrock, LangChain, and modern retrieval architectures.
+By using this app, you agree to comply with AWS’s Documentation Terms of Use
+.
 
-By following these principles, the AWS RAG Assistant supports responsible innovation, intellectual property respect, and transparent AI research.
+📜 License — MIT
+MIT License
+
+Copyright (c) 2025 Navya Kalyani
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the “Software”), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is furnished
+to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+
+🌟 Author
+
+👩🏻‍💻 Navya Kalyani
+💼 QA Engineer · Data Science & AI Graduate
+📍 United Kingdom
+🔗 Built with Amazon Bedrock, LangChain, and ❤️ for AWS Cloud.
