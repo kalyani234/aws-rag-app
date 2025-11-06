@@ -19,35 +19,24 @@ If the local AWS PDF knowledge base doesn’t contain the answer, the assistant 
 ---
 
 
-## 🚀 Key Features
+## 🧱 Tech Stack
 
-✅ **Two Bedrock Models**  
-- 🦙 *Meta Llama 3 8B Instruct* — lightweight, fast reasoning  
-- ⚡ *Amazon Nova Pro v1* — deep analytical model  
-
-✅ **Persistent Memory**  
-- Uses `ConversationSummaryMemory` and `SQLChatMessageHistory`  
-- Stores all chat sessions in PostgreSQL  
-
-✅ **Vector Search (RAG)**  
-- Embeds your AWS PDFs using **Titan Embeddings v2**  
-- Stores vectors in **PGVector**  
-
-✅ **Web Fallback (Hybrid QA)**  
-- If PGVector has no relevant context →  
-  Searches AWS Docs via **SerpAPI**, summarizes pages via **Groq**, and re-asks the model  
-
-✅ **Streamlit UI**  
-- Minimal dark AWS-themed interface  
-- Dynamic model switching  
-- Source citations for transparency  
-
-✅ **Dockerized Deployment**  
-- One command:  
-  ```bash
-  docker compose up --build
-
-
+| Component | Technology | Description |
+|------------|-------------|-------------|
+| **Frontend UI** | 🖥️ **Streamlit** | Interactive chat interface for RAG queries, model selection, and result visualization. |
+| **LLMs (Core Reasoning)** | 🤖 **Amazon Bedrock (Llama 3 & Nova Pro)** | Provides secure, managed access to state-of-the-art foundation models for reasoning and generation. |
+| **Summarization LLM** | 🦙 **Llama 3 (lightweight)** | Used for conversation summarization inside `ConversationSummaryMemory` to persist context efficiently. |
+| **Embeddings Model** | 🧩 **Amazon Titan Embeddings v2** | Converts AWS document text into numerical vectors for semantic similarity search. |
+| **Vector Store** | 🗄️ **PGVector (PostgreSQL extension)** | Stores document embeddings and supports fast similarity queries. |
+| **Database** | 🧠 **PostgreSQL** | Persists vector data (`langchain_pg_embedding`) and conversation memory (`chat_history`). |
+| **Memory System** | 💬 **LangChain ConversationSummaryMemory** | Manages long-term chat context summaries using a summarization LLM. |
+| **Retrieval Framework** | 🔗 **LangChain (ConversationalRetrievalChain)** | Orchestrates RAG flow between embeddings, LLMs, and user queries. |
+| **Web Search (Fallback)** | 🌐 **SerpAPI** | Performs real-time Google searches restricted to `docs.aws.amazon.com` for live AWS documentation. |
+| **Web Summarization** | ⚡ **Groq API** | Summarizes live AWS documentation pages returned by SerpAPI before passing them to the LLM. |
+| **Containerization** | 🐳 **Docker & Docker Compose** | Runs Streamlit app and PGVector database in isolated, reproducible environments. |
+| **Infrastructure & Deployment** | ☁️ **AWS Bedrock SDK + boto3** | Connects securely to Bedrock models using AWS credentials. |
+| **Document Processing** | 📄 **LangChain PDF Loader + Text Splitters** | Loads and chunks AWS Prescriptive Guidance PDFs before embedding. |
+| **Language Runtime** | 🐍 **Python 3.10** | Core language environment for all modules and LangChain integrations. |
 
 ---
 ## 🗂️ Directory Structure
@@ -74,45 +63,53 @@ aws-rag-app/
 
 ---
 
-⚙️ Setup Instructions
+## ⚙️ Setup Instructions
 1️⃣ Clone the repository
+```
 git clone https://github.com/<your-username>/aws-rag-assistant.git
 cd aws-rag-assistant
+```
 
-2️⃣ Add environment variables
+## 2️⃣ Add environment variables
 
-Create a .env file in the project root:
-
-PG_CONNECTION_STRING=postgresql+psycopg2://postgres:navya123@db:5432/docs_db
+**Create a .env file in the project root:**
+```
+PG_CONNECTION_STRING=postgresql+psycopg2://postgres:pwd@db:5432/docs_db
 AWS_REGION=us-east-1
 SERPAPI_API_KEY=your_serpapi_key
 GROQ_API_KEY=your_groq_key
-
+```
 
 💡 Your ~/.aws credentials are automatically mounted in the container for Bedrock access.
 
-3️⃣ Add your AWS PDFs
+## 3️⃣ Add your AWS PDFs
 
-Place AWS Prescriptive Guidance or architecture PDFs in:
+**Place AWS Prescriptive Guidance or architecture PDFs in:**
 
+```
 data/
+```
 
-4️⃣ Build vector embeddings
+## 4️⃣ Build vector embeddings
+
+```
 docker compose up --build -d
 docker exec -it aws-rag-assistant python build_index.py
+```
 
-
-Check the database:
-
+**Check the database:**
+```
 docker exec -it pgvector-db psql -U postgres -d docs_db
 \dt
 SELECT COUNT(*) FROM langchain_pg_embedding;
+```
 
-5️⃣ Run the app
+## 5️⃣ Run the app
+```
 docker compose up
+```
 
-
-App will be live at 👉 http://localhost:8501
+**App will be live at 👉 http://localhost:8501**
 
 🧪 Example Prompts
 Type	Example Question
@@ -120,33 +117,9 @@ AWS Architecture	What are the key components of an AWS data lake?
 DevOps	How does AWS CodePipeline integrate with ECS deployments?
 Event-driven	How does AWS Glue work with EventBridge in a data lake?
 Web fallback	What new features were added to Amazon Bedrock in 2025?
-🧱 Database Commands
 
-To inspect or reset:
 
-docker exec -it pgvector-db psql -U postgres -d docs_db
-\dt
-TRUNCATE TABLE langchain_pg_embedding;
-TRUNCATE TABLE langchain_pg_collection;
-DROP TABLE IF EXISTS chat_history;
 
-🧭 Ethics & Fair Use
-
-This project is built for educational and research purposes.
-All web data is sourced only from public AWS documentation:
-
-✅ Queries https://docs.aws.amazon.com via SerpAPI (licensed API)
-
-✅ Summarizes fetched content with Groq API
-
-✅ Always cites original URLs
-
-❌ Does not scrape private or commercial content
-
-❌ Does not redistribute full AWS documentation
-
-By using this app, you agree to comply with AWS’s Documentation Terms of Use
-.
 
 📜 License — MIT
 MIT License
@@ -166,10 +139,3 @@ copies or substantial portions of the Software.
 THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-
-🌟 Author
-
-👩🏻‍💻 Navya Kalyani
-💼 QA Engineer · Data Science & AI Graduate
-📍 United Kingdom
-🔗 Built with Amazon Bedrock, LangChain, and ❤️ for AWS Cloud.
