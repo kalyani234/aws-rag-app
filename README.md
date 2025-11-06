@@ -19,24 +19,19 @@ If the local AWS PDF knowledge base doesn’t contain the answer, the assistant 
 ---
 
 
-## 🧱 Tech Stack
+## 🧱 Tech Stack## 🧱 Tech Stack
 
 | Component | Technology | Description |
 |------------|-------------|-------------|
-| **Frontend UI** | 🖥️ **Streamlit** | Interactive chat interface for RAG queries, model selection, and result visualization. |
-| **LLMs (Core Reasoning)** | 🤖 **Amazon Bedrock (Llama 3 & Nova Pro)** | Provides secure, managed access to state-of-the-art foundation models for reasoning and generation. |
-| **Summarization LLM** | 🦙 **Llama 3 (lightweight)** | Used for conversation summarization inside `ConversationSummaryMemory` to persist context efficiently. |
-| **Embeddings Model** | 🧩 **Amazon Titan Embeddings v2** | Converts AWS document text into numerical vectors for semantic similarity search. |
-| **Vector Store** | 🗄️ **PGVector (PostgreSQL extension)** | Stores document embeddings and supports fast similarity queries. |
-| **Database** | 🧠 **PostgreSQL** | Persists vector data (`langchain_pg_embedding`) and conversation memory (`chat_history`). |
-| **Memory System** | 💬 **LangChain ConversationSummaryMemory** | Manages long-term chat context summaries using a summarization LLM. |
-| **Retrieval Framework** | 🔗 **LangChain (ConversationalRetrievalChain)** | Orchestrates RAG flow between embeddings, LLMs, and user queries. |
-| **Web Search (Fallback)** | 🌐 **SerpAPI** | Performs real-time Google searches restricted to `docs.aws.amazon.com` for live AWS documentation. |
-| **Web Summarization** | ⚡ **Groq API** | Summarizes live AWS documentation pages returned by SerpAPI before passing them to the LLM. |
-| **Containerization** | 🐳 **Docker & Docker Compose** | Runs Streamlit app and PGVector database in isolated, reproducible environments. |
-| **Infrastructure & Deployment** | ☁️ **AWS Bedrock SDK + boto3** | Connects securely to Bedrock models using AWS credentials. |
-| **Document Processing** | 📄 **LangChain PDF Loader + Text Splitters** | Loads and chunks AWS Prescriptive Guidance PDFs before embedding. |
-| **Language Runtime** | 🐍 **Python 3.10** | Core language environment for all modules and LangChain integrations. |
+| **Frontend** | Streamlit | Chat-based UI for user interaction and model selection. |
+| **LLMs** | Amazon Bedrock (Llama 3, Nova Pro) | Core models for reasoning and AWS-related Q&A. |
+| **Memory** | LangChain + PostgreSQL | Stores and summarizes past chats for context persistence. |
+| **Embeddings** | Amazon Titan Embeddings v2 | Converts documents into vector form for semantic search. |
+| **Vector Store** | PGVector | Stores and retrieves document embeddings efficiently. |
+| **Database** | PostgreSQL | Backs vector data and chat history storage. |
+| **Web Fallback** | SerpAPI + Groq | Fetches and summarizes live AWS Docs when PDFs lack context. |
+| **Orchestration** | LangChain RAG | Connects retrieval, LLM, memory, and prompt logic. |
+| **Containerization** | Docker + Compose | Runs app and database in isolated, reproducible environments. |
 
 ---
 ## 🗂️ Directory Structure
@@ -113,15 +108,12 @@ docker compose up
 
 🧪 Example Prompts
 Type	Example Question
-AWS Architecture	What are the key components of an AWS data lake?
-DevOps	How does AWS CodePipeline integrate with ECS deployments?
-Event-driven	How does AWS Glue work with EventBridge in a data lake?
-Web fallback	What new features were added to Amazon Bedrock in 2025?
 
 
 
 
-📜 License — MIT
+
+## 📜 License — MIT
 MIT License
 
 Copyright (c) 2025 Navya Kalyani
