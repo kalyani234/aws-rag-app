@@ -13,6 +13,13 @@
 **AWS RAG Assistant** is an intelligent Retrieval-Augmented Generation (RAG) chatbot that answers **AWS architecture, DevOps, and data engineering** questions.  
 It combines **Amazon Bedrock (Llama 3 & Nova Pro)**, **PGVector/PostgreSQL embeddings**, and a **web fallback using SerpAPI + Groq** to fetch and summarize live AWS documentation.
 
+```
+User → Vector DB (PDF) → LLM
+          ↓ (if weak)
+      SerpAPI + GROQ → Live AWS Docs
+
+```
+
 If the local AWS PDF knowledge base doesn’t contain the answer, the assistant searches  
 [`https://docs.aws.amazon.com`](https://docs.aws.amazon.com) in real time and includes citations.
 
