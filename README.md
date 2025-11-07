@@ -23,6 +23,8 @@ User → Vector DB (PDF) → LLM
 If the local AWS PDF knowledge base doesn’t contain the answer, the assistant searches  
 [`https://docs.aws.amazon.com`](https://docs.aws.amazon.com) in real time and includes citations.
 
+<img width="1403" height="674" alt="Screenshot 2025-11-07 at 3 21 57 PM" src="https://github.com/user-attachments/assets/091ea8d7-4bba-4479-932c-71a36a706b79" />
+
 ---
 
 
