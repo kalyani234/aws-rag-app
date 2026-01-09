@@ -115,12 +115,6 @@ docker compose up
 
 **App will be live at 👉 http://localhost:8501**
 
-🧪 Example Prompts
-Type	Example Question
-
-
-
-
 
 ## 📜 License — MIT
 MIT License
